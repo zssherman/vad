@@ -146,7 +146,8 @@ def velocity_azimuth_display(radar, corrected_velocity=None,
         sumsincos = np.nansum(sincos, 0)
         sumsin2 = np.nansum(sin2, 0)
         sumcos2 = np.nansum(cos2, 0)
-        a_value = (sumCminU_mcos - (sumsincos*sumCminU_msin / sumsin2))\                   / (sumcos2 - (sumsincos**2) / sumsin2)
+        a_value = (sumCminU_mcos - (sumsincos*sumCminU_msin / sumsin2))\
+        / (sumcos2 - (sumsincos**2) / sumsin2)
         b_value = (sumCminU_msin - a_value*sumsincos) / sumsin2
         speed = np.sqrt(a_value**2 + b_value**2) / np.cos(np.radians(El))
         angle = np.arctan2(a_value, b_value)
@@ -201,7 +202,8 @@ def velocity_azimuth_display(radar, corrected_velocity=None,
         else:
             velocity_used = corrected_velocity
 
-        if radar.fields[velocity_used]['units'] is not 'meters_per_second'                 and radar.fields[velocity_used]['units'] is not 'm/s':
+        if radar.fields[velocity_used]['units'] is not 'meters_per_second'\
+        and radar.fields[velocity_used]['units'] is not 'm/s':
             raise ValueError('Field used for VAD Calculation needs to be'
                              ' a velocity field.')
 
