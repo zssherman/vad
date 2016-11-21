@@ -1,8 +1,3 @@
-
-# coding: utf-8
-
-# In[5]:
-
 """ Unit Tests for Py-ART's retrieve/vad.py module. """
 
 from __future__ import print_function
@@ -47,4 +42,3 @@ def test_velocity_azimuth_display():
     assert_almost_equal(vad['z_interval'], z_interval, 8)
     assert_almost_equal(vad['u_mean'], u_mean, 8)
     assert_almost_equal(vad['v_mean'], v_mean, 8)
-
