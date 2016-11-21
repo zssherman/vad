@@ -9,8 +9,6 @@ from numpy.testing import assert_almost_equal, assert_raises
 from pyart.retrieve import velocity_azimuth_display
 
 
-# In[2]:
-
 def test_velocity_azimuth_display():
     test_radar = pyart.io.read(pyart.testing.NEXRAD_ARCHIVE_MSG1_FILE)
     corrected_velocity = None
