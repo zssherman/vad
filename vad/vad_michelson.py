@@ -1,11 +1,13 @@
-# VAD code adapted from code created by Scott Collis.
-# VAD technique is based on Michelson et al (2000).
-
 """
 pyart.retrieve.velocity_azimuth_display
 =======================================
 
 Retrieval of VADs from a radar object.
+
+This VAD code is adapted from code written by Scott Collis:
+
+https://github.com/scollis/notebooks/blob/master/DYNAMO%20AIME%20
+workshop%20workbook.ipynb
 
 .. autosummary::
     :toctreeL generated/
@@ -23,8 +25,8 @@ import numpy as np
 from pyart.core import HorizontalWindProfile
 
 
-def velocity_azimuth_display(radar, velocity=None,
-                             heights=None, gatefilter=None):
+def velocity_azimuth_display(radar, velocity,
+                             z_want=None, gatefilter=None):
     """
     Velocity azimuth display.
 
@@ -34,11 +36,10 @@ def velocity_azimuth_display(radar, velocity=None,
         Radar object used.
     velocity : string
         Velocity field to use for VAD calculation.
-        If None, the default velocity field will be used.
 
     Other Parameters
     ----------------
-    heights: array
+    z_want : array
         Heights for where to sample vads from.
         None will result in np.linespace(0, 10000, 100).
     gatefilter : GateFilter
@@ -71,12 +72,12 @@ def velocity_azimuth_display(radar, velocity=None,
 
     speed = []
     angle = []
-    height = []
+    heights = []
     z_gate_data = radar.gate_z['data']
-    if heights is None:
+    if z_want is None:
         z_want = np.linspace(0, 10000, 100)
     else:
-        z_want = heights
+        z_want
 
     for i in range(len(radar.sweep_start_ray_index['data'])):
         index_start = radar.sweep_start_ray_index['data'][i]
@@ -86,12 +87,8 @@ def velocity_azimuth_display(radar, velocity=None,
         else:
             index_end = index_end - 1
 
-        if velocity is None:
-            velocity_used = 'velocity'
-        else:
-            velocity_used = velocity
         velocities = radar.fields[
-            velocity_used]['data'][index_start:index_end]
+            velocity]['data'][index_start:index_end]
         if gatefilter is not None:
             velocities = np.ma.masked_where(
                 gatefilter.gate_excluded, velocities)
@@ -106,11 +103,11 @@ def velocity_azimuth_display(radar, velocity=None,
               ' meters')
         speed.append(one_level['speed'][~bad])
         angle.append(one_level['angle'][~bad])
-        height.append(z_gate_data[index_start, :][~bad])
+        heights.append(z_gate_data[index_start, :][~bad])
 
     speed_array = np.concatenate(speed)
     angle_array = np.concatenate(angle)
-    height_array = np.concatenate(height)
+    height_array = np.concatenate(heights)
     arg_order = height_array.argsort()
     speed_ordered = speed_array[arg_order]
     height_ordered = height_array[arg_order]
@@ -122,6 +119,7 @@ def velocity_azimuth_display(radar, velocity=None,
     vad = HorizontalWindProfile.from_u_and_v(z_want, u_mean,
                                              v_mean)
     return vad
+
 
 def _interval_mean(data, current_z, wanted_z):
     """ Find the mean of data indexed by current_z
@@ -138,9 +136,11 @@ def _interval_mean(data, current_z, wanted_z):
                             for i in range(len(pos_upper))])
     return mean_values
 
+
 def _sd_to_uv(speed, direction):
     """ Takes speed and direction to create u_mean and v_mean. """
     return (speed * np.sin(direction), speed * np.cos(direction))
+
 
 def _vad_calculation(velocity_field, azimuth, elevation):
     """ Calculates VAD for a scan, returns speed and angle
@@ -158,9 +158,10 @@ def _vad_calculation(velocity_field, azimuth, elevation):
     sumv = np.ma.sum(velocity_count, 2)
     vals = np.isnan(sumv)
     vals2 = np.vstack((vals, vals))
-    # Jonathan, still can't get == 0 switched to is not the expression.
-    # Have errors, I apologize I might be overthinking how to accomplish that.
+
+    # Line below will eventually be changed. 
     count = np.sum(np.isnan(sumv) == False, 0)
+
     aa = count < 8
     vals[:, aa] = 0
     vals2[:, aa] = 0
