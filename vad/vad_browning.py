@@ -1,18 +1,17 @@
-# This is VAD code adapted from VAD code created by Jonathan Helmus.
-# VAD technique is based on Browning et al (1968).
-
 """
 pyart.retrieve.velocity_azimuth_display
 =======================================
 
 Retrieval of VADs from a radar object.
 
+This is code is adapted from code written by Jonathan Helmus.
+
 .. autosummary::
     :toctreeL generated/
     :template: dev_template.rst
 
     velocity_azimuth_display
-    _horizontal_winds
+    _vad_calculation
     _inverse_dist_squared
     _Average1D
 
@@ -24,13 +23,13 @@ from pyart.core import HorizontalWindProfile
 
 
 def velocity_azimuth_display(
-        radar, velocity=None, height=None,
+        radar, velocity, z_want=None,
         valid_ray_min=16, gatefilter=None, window=2,
         weight='equal'):
     """
     Velocity azimuth display.
 
-    Note: If a specific sweep is desired, before using the
+    Note: This code uses only one sweep. Before using the
     velocity_azimuth_display function, use, for example:
     one_sweep_radar = radar.extract_sweeps([0])
 
@@ -40,11 +39,10 @@ def velocity_azimuth_display(
         Radar object used.
     velocity : string
         Velocity field to use for VAD calculation.
-        If None, the default velocity field will be used.
 
     Other Parameters
     ----------------
-    height : array
+    z_want : array
         Array of desired heights to be sampled for the vad
         calculation.
     valid_ray_min : int
@@ -84,34 +82,25 @@ def velocity_azimuth_display(
 
     """
 
-    if velocity is None:
-        velocity_used = 'velocity'
-    else:
-        velocity_used = velocity
-
-    velocities = radar.fields[velocity_used]['data']
-    #mask = velocities.mask
-    #velocities[np.where(mask)] = np.nan
+    velocities = radar.fields[velocity]['data']
     if gatefilter is not None:
         velocities = np.ma.masked_where(
             gatefilter.gate_excluded, velocities)
     azimuths = radar.azimuth['data'][:]
     elevation = radar.fixed_angle['data'][0]
 
-    u_wind, v_wind = _horizontal_winds(velocities, azimuths,
-                                       elevation, valid_ray_min)
+    u_wind, v_wind = _vad_calculation(velocities, azimuths,
+                                      elevation, valid_ray_min)
     bad = np.logical_or(np.isnan(u_wind), np.isnan(v_wind))
     good_u_wind = u_wind[~bad]
     good_v_wind = v_wind[~bad]
 
     radar_height = radar.gate_z['data'][0]
     good_height = radar_height[~bad]
-
-    if height is None:
+    if z_want is None:
         z_want = np.linspace(0, 1000, 100)[:50]
     else:
-        z_want = height
-
+        z_want
     try:
         print('max height', np.max(good_height), ' meters')
         print('min height', np.min(good_height), ' meters')
@@ -133,8 +122,9 @@ def velocity_azimuth_display(
         z_want, u_wanted, v_wanted)
     return vad
 
-def _horizontal_winds(velocities, azimuths,
-                      elevation, valid_ray_min):
+
+def _vad_calculation(velocities, azimuths,
+                     elevation, valid_ray_min):
     """ Calculates VAD for a scan and returns u_mean and
     v_mean. velocities is a 2D array, azimuths is a 1D
     array, elevation is a number.
@@ -209,6 +199,7 @@ def _horizontal_winds(velocities, azimuths,
     v_mean = x_2 * elevation_scale
     return u_mean, v_mean
 
+
 def _inverse_dist_squared(dist):
     """ Obtaining distance weights by using distance weighting
     interpolation, using the inverse distance-squared relationship.
@@ -224,12 +215,12 @@ class _Average1D(object):
 
     def __init__(self, x, y, window, weight,
                  fill_value=99999.):
-
         sort_idx = np.argsort(x)
         self.x_sorted = x[sort_idx]
         self.y_sorted = y[sort_idx]
         self.window = window
         self.fill_value = fill_value
+
         if weight == 'equal':
             self.weight_func = lambda x: None
         elif weight == 'idw':
@@ -240,7 +231,6 @@ class _Average1D(object):
             raise ValueError("Invalid weight argument:", weight)
 
     def __call__(self, x_new, window=None):
-
         if window is None:
             window = self.window
 
